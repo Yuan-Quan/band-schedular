@@ -83,5 +83,5 @@ Sessionx.vim
 .vscode/tags
 .devcontainer/
 
-bin/
-obj/
+band-schedular/bin/
+band-schedular/obj/
