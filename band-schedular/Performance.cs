@@ -18,7 +18,7 @@ namespace BandScheduler
 
         private void InitializeDays()
         {
-            // August 11, 2025 - 7 time slots (0-6)
+            // August 11, 2025 - 7 time slots (0-6) + 1 flexible slot
             var day1 = new PerformanceDay
             {
                 Date = new DateTime(2025, 8, 11)
@@ -27,9 +27,11 @@ namespace BandScheduler
             {
                 day1.TimeSlots.Add(new TimeSlot { Order = i });
             }
+            // Add flexible slot for bands without specific time preference
+            day1.TimeSlots.Add(new TimeSlot { Order = -1, IsFlexibleSlot = true });
             Days.Add(day1);
 
-            // August 12, 2025 - 6 time slots (0-5)
+            // August 12, 2025 - 6 time slots (0-5) + 1 flexible slot
             var day2 = new PerformanceDay
             {
                 Date = new DateTime(2025, 8, 12)
@@ -38,9 +40,11 @@ namespace BandScheduler
             {
                 day2.TimeSlots.Add(new TimeSlot { Order = i });
             }
+            // Add flexible slot for bands without specific time preference
+            day2.TimeSlots.Add(new TimeSlot { Order = -1, IsFlexibleSlot = true });
             Days.Add(day2);
 
-            // August 13, 2025 - 6 time slots (0-5)
+            // August 13, 2025 - 6 time slots (0-5) + 1 flexible slot
             var day3 = new PerformanceDay
             {
                 Date = new DateTime(2025, 8, 13)
@@ -49,6 +53,8 @@ namespace BandScheduler
             {
                 day3.TimeSlots.Add(new TimeSlot { Order = i });
             }
+            // Add flexible slot for bands without specific time preference
+            day3.TimeSlots.Add(new TimeSlot { Order = -1, IsFlexibleSlot = true });
             Days.Add(day3);
         }
 
@@ -74,12 +80,12 @@ namespace BandScheduler
 
                     if (matchingDay != null)
                     {
-                        // Check if the preferred time slot exists for this day
-                        if (preference.PreferredTimeSlot >= 0 && preference.PreferredTimeSlot < matchingDay.TimeSlots.Count)
+                        // Check if band has a specific time slot preference
+                        if (preference.PreferredTimeSlot >= 0 && preference.PreferredTimeSlot < matchingDay.TimeSlots.Count - 1) // -1 to exclude flexible slot
                         {
+                            // Band has specific time preference
                             var targetSlot = matchingDay.TimeSlots[preference.PreferredTimeSlot];
 
-                            // Create a copy of the band with the preference weight for this slot
                             var bandCandidate = new BandCandidate
                             {
                                 Band = band,
@@ -88,6 +94,22 @@ namespace BandScheduler
 
                             targetSlot.BandCandidates.Add(bandCandidate);
                         }
+                        else if (preference.PreferredTimeSlot == -1)
+                        {
+                            // Band has no specific time preference, add to flexible slot
+                            var flexibleSlot = matchingDay.TimeSlots.FirstOrDefault(ts => ts.IsFlexibleSlot);
+                            if (flexibleSlot != null)
+                            {
+                                var bandCandidate = new BandCandidate
+                                {
+                                    Band = band,
+                                    PreferenceWeight = preference.Weight
+                                };
+
+                                flexibleSlot.BandCandidates.Add(bandCandidate);
+                            }
+                        }
+                        // If PreferredTimeSlot is out of range (but not -1), ignore the preference
                     }
                 }
             }
@@ -113,7 +135,8 @@ namespace BandScheduler
 
     public class TimeSlot
     {
-        public int Order { get; set; } // 0 - 6 for day 1, 0-5 for day 2 and 3
+        public int Order { get; set; } // 0 - 6 for day 1, 0-5 for day 2 and 3, -1 for flexible slot
+        public bool IsFlexibleSlot { get; set; } = false; // True for slots that accept bands without specific time preference
 
         // rehearsal and performance time
 

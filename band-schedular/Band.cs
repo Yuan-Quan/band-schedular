@@ -151,7 +151,7 @@ namespace BandScheduler
 
         private static int ParseTimeSlot(string slotStr)
         {
-            if (string.IsNullOrEmpty(slotStr)) return 0;
+            if (string.IsNullOrEmpty(slotStr)) return -1; // Return -1 for no specific preference
 
             // Parse slots like "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"
             var cleanSlot = slotStr.ToLower().Replace("st", "").Replace("nd", "").Replace("rd", "").Replace("th", "");
@@ -162,7 +162,7 @@ namespace BandScheduler
                 return Math.Max(0, slot - 1);
             }
 
-            return 0; // Default to first slot if parsing fails
+            return -1; // Return -1 if parsing fails (no specific preference)
         }
     }
 }

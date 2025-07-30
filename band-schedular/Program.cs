@@ -50,6 +50,17 @@ namespace BandScheduler
                 for (int i = 0; i < day.TimeSlots.Count; i++)
                 {
                     var slot = day.TimeSlots[i];
+                    string slotLabel;
+
+                    if (slot.IsFlexibleSlot)
+                    {
+                        slotLabel = "Flex";
+                    }
+                    else
+                    {
+                        slotLabel = (i + 1).ToString();
+                    }
+
                     string candidatesInfo = "No candidates";
 
                     if (slot.BandCandidates.Count > 0)
@@ -74,9 +85,8 @@ namespace BandScheduler
                         }
                     }
 
-                    Console.WriteLine($"{i + 1,-6} {candidatesInfo,-70}");
+                    Console.WriteLine($"{slotLabel,-6} {candidatesInfo,-70}");
                 }
-
                 Console.WriteLine();
             }
 
@@ -106,7 +116,8 @@ namespace BandScheduler
                 for (int i = 0; i < band.SchedulePreferences.Count; i++)
                 {
                     var pref = band.SchedulePreferences[i];
-                    Console.WriteLine($"    Pref{i + 1}: {pref.PreferredDate.ToString("yyyy-MM-dd")} Slot {pref.PreferredTimeSlot + 1}");
+                    string slotDisplay = pref.PreferredTimeSlot == -1 ? "Flex" : $"Slot {pref.PreferredTimeSlot + 1}";
+                    Console.WriteLine($"    Pref{i + 1}: {pref.PreferredDate.ToString("yyyy-MM-dd")} {slotDisplay}");
                 }
             }
         }
