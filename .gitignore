@@ -1,0 +1,84 @@
+# .gitignore file created for free with Tower (https://www.git-tower.com/)
+# For suggestions or improvements please contact us using support@git-tower.com
+# Generated on 2025-07-29
+# Includes: vim, vscode
+
+### Universal ###
+# Common files that should be ignored in all projects
+
+# Temporary files
+*.tmp
+*~
+
+*.bak
+# Environment files (containing secrets, API keys, credentials)
+.env
+*.env
+.env.*
+
+# Local configuration that shouldn't be shared
+*.local
+
+### Vim ###
+# Vim editor swap and temporary files
+
+# Vim temporary files
+*.swp
+*.swo
+*.swn
+*.swm
+
+*.swl
+*.un~
+*~
+.netrwhist
+Session.vim
+
+Sessionx.vim
+.vim/
+*.vim.old
+.viminfo
+.vimrc.local
+
+.nvimlog
+.undo/
+.backup/
+.swap/
+.vim-bookmarks
+
+.vimsession
+.vim-fuf-data/
+*.orig
+[._]*.s[a-v][a-z]
+!*.svg
+
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+### Vscode ###
+# Visual Studio Code editor settings and workspace files
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.vsix
+.ionide
+
+.vs/
+*.code-workspace
+.vscode-test
+.vscodeignore
+.vscode/chrome
+
+.vscode-server/
+.vscode/sftp.json
+.vscode/tags
+.devcontainer/
