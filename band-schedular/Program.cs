@@ -13,6 +13,11 @@ namespace BandScheduler
             // Additional logic to interact with the scheduler can be added here
             scheduler.PrintBands();
             scheduler.AddBandsToSlots();
+
+            Console.WriteLine("\n" + "=".PadRight(80, '='));
+            scheduler.OptimizeScheduleStage1();
+            Console.WriteLine("=".PadRight(80, '=') + "\n");
+
             scheduler.PrintSchedule();
         }
     }
@@ -26,6 +31,128 @@ namespace BandScheduler
         {
             Console.WriteLine("Adding bands to performance slots...");
             Performance.AddBandsToSlots(Bands);
+        }
+
+        public void OptimizeScheduleStage1()
+        {
+            Console.WriteLine("Optimizing schedule - Stage 1: Removing lower weighted preferences for uncontested top choices...");
+
+            int totalRemovedPreferences = 0;
+
+            foreach (var day in Performance.Days)
+            {
+                foreach (var slot in day.TimeSlots)
+                {
+                    if (slot.BandCandidates.Count == 0) continue; // Skip empty slots
+
+                    // Handle single candidate slots (automatically uncontested)
+                    if (slot.BandCandidates.Count == 1)
+                    {
+                        var winningBand = slot.BandCandidates[0].Band;
+                        var winningWeight = slot.BandCandidates[0].PreferenceWeight;
+                        int removedForThisBand = 0;
+
+                        // Remove all lower-weighted preferences for this winning band from OTHER slots
+                        foreach (var otherDay in Performance.Days)
+                        {
+                            foreach (var otherSlot in otherDay.TimeSlots)
+                            {
+                                if (otherSlot == slot) continue; // Skip the current winning slot
+
+                                // Find candidates for this band in other slots
+                                var bandCandidatesInOtherSlot = otherSlot.BandCandidates
+                                    .Where(bc => bc.Band == winningBand && bc.PreferenceWeight < winningWeight)
+                                    .ToList();
+
+                                // Remove lower-weighted preferences
+                                foreach (var candidateToRemove in bandCandidatesInOtherSlot)
+                                {
+                                    otherSlot.BandCandidates.Remove(candidateToRemove);
+                                    removedForThisBand++;
+                                    totalRemovedPreferences++;
+                                }
+                            }
+                        }
+
+                        if (removedForThisBand > 0)
+                        {
+                            Console.WriteLine($"  - {winningBand.Name} secured {day.Date:MM-dd} slot {GetSlotDisplayName(slot)} " +
+                                            $"(weight {winningWeight}) - removed {removedForThisBand} lower preferences");
+                        }
+                        continue; // Move to next slot
+                    }
+
+                    // Handle multi-candidate slots
+                    // Group candidates by band (in case a band appears multiple times)
+                    var bandGroups = slot.BandCandidates
+                        .GroupBy(bc => bc.Band)
+                        .Select(g => new
+                        {
+                            Band = g.Key,
+                            MaxWeight = g.Max(bc => bc.PreferenceWeight),
+                            Candidates = g.ToList()
+                        })
+                        .ToList();
+
+                    // Find the highest weight among all bands for this slot
+                    double highestWeight = bandGroups.Max(bg => bg.MaxWeight);
+
+                    // Get bands that have the highest weight for this slot
+                    var topWeightBands = bandGroups
+                        .Where(bg => bg.MaxWeight == highestWeight)
+                        .ToList();
+
+                    // If only one band has the highest weight, it's uncontested
+                    if (topWeightBands.Count == 1)
+                    {
+                        var winningBand = topWeightBands[0].Band;
+                        int removedForThisBand = 0;
+
+                        // Remove all lower-weighted preferences for this winning band from OTHER slots
+                        foreach (var otherDay in Performance.Days)
+                        {
+                            foreach (var otherSlot in otherDay.TimeSlots)
+                            {
+                                if (otherSlot == slot) continue; // Skip the current winning slot
+
+                                // Find candidates for this band in other slots
+                                var bandCandidatesInOtherSlot = otherSlot.BandCandidates
+                                    .Where(bc => bc.Band == winningBand && bc.PreferenceWeight < highestWeight)
+                                    .ToList();
+
+                                // Remove lower-weighted preferences
+                                foreach (var candidateToRemove in bandCandidatesInOtherSlot)
+                                {
+                                    otherSlot.BandCandidates.Remove(candidateToRemove);
+                                    removedForThisBand++;
+                                    totalRemovedPreferences++;
+                                }
+                            }
+                        }
+
+                        Console.WriteLine($"  - {winningBand.Name} secured {day.Date:MM-dd} slot {GetSlotDisplayName(slot)} " +
+                                        $"(weight {highestWeight}) - removed {removedForThisBand} lower preferences");
+                    }
+                }
+            }
+
+            // Re-sort all slots after optimization
+            foreach (var day in Performance.Days)
+            {
+                foreach (var slot in day.TimeSlots)
+                {
+                    slot.BandCandidates = slot.BandCandidates
+                        .OrderByDescending(bc => bc.PreferenceWeight)
+                        .ToList();
+                }
+            }
+
+            Console.WriteLine($"Stage 1 optimization complete. Removed {totalRemovedPreferences} lower-weighted preferences.");
+        }
+
+        private string GetSlotDisplayName(TimeSlot slot)
+        {
+            return slot.IsFlexibleSlot ? "Flex" : (slot.Order + 1).ToString();
         }
 
         public void PrintSchedule()
