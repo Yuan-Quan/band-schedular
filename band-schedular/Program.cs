@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Google.OrTools.LinearSolver;
 
 namespace BandScheduler
 {
@@ -14,8 +15,14 @@ namespace BandScheduler
             scheduler.PrintBands();
             scheduler.AddBandsToSlots();
 
+            //Console.WriteLine("\n" + "=".PadRight(80, '='));
+            //scheduler.OptimizeScheduleStage1();
+            //Console.WriteLine("=".PadRight(80, '=') + "\n");
+
+            //scheduler.PrintSchedule();
+
             Console.WriteLine("\n" + "=".PadRight(80, '='));
-            scheduler.OptimizeScheduleStage1();
+            scheduler.OptimizeGoogleORTools();
             Console.WriteLine("=".PadRight(80, '=') + "\n");
 
             scheduler.PrintSchedule();
@@ -33,7 +40,149 @@ namespace BandScheduler
             Performance.AddBandsToSlots(Bands);
         }
 
-        public void OptimizeScheduleStage1()
+
+        public void OptimizeGoogleORTools()
+        {
+            Console.WriteLine("Optimizing schedule using Google OR Tools...");
+
+            // Create the solver
+            Solver solver = Solver.CreateSolver("SCIP");
+            if (solver == null)
+            {
+                Console.WriteLine("Could not create solver SCIP. Trying CBC...");
+                solver = Solver.CreateSolver("CBC_MIXED_INTEGER_PROGRAMMING");
+            }
+
+            if (solver == null)
+            {
+                Console.WriteLine("Could not create solver. OR-Tools not available.");
+                return;
+            }
+
+            // Create variables: decision variables for each band-slot combination
+            var bandSlotVars = new Dictionary<(Band band, int dayIndex, int slotIndex), Variable>();
+            var bandSlotWeights = new Dictionary<(Band band, int dayIndex, int slotIndex), double>();
+
+            // Initialize decision variables and weights
+            for (int dayIndex = 0; dayIndex < Performance.Days.Count; dayIndex++)
+            {
+                var day = Performance.Days[dayIndex];
+                for (int slotIndex = 0; slotIndex < day.TimeSlots.Count; slotIndex++)
+                {
+                    var slot = day.TimeSlots[slotIndex];
+
+                    foreach (var candidate in slot.BandCandidates)
+                    {
+                        var key = (candidate.Band, dayIndex, slotIndex);
+                        // Binary variable: 1 if band is assigned to this slot, 0 otherwise
+                        bandSlotVars[key] = solver.MakeIntVar(0, 1, $"band_{candidate.Band.GUID}_day_{dayIndex}_slot_{slotIndex}");
+                        bandSlotWeights[key] = candidate.PreferenceWeight;
+                    }
+                }
+            }
+
+            Console.WriteLine($"Created {bandSlotVars.Count} decision variables.");
+
+            // Constraint 1: Each band can be assigned to at most one slot
+            foreach (var band in Bands)
+            {
+                var bandVars = bandSlotVars.Where(kvp => kvp.Key.band == band).Select(kvp => kvp.Value).ToArray();
+                if (bandVars.Length > 0)
+                {
+                    var constraint = solver.MakeConstraint(0, 1, $"band_{band.GUID}_max_one_slot");
+                    foreach (var variable in bandVars)
+                    {
+                        constraint.SetCoefficient(variable, 1);
+                    }
+                }
+            }
+
+            // Constraint 2: Each slot can have at most one band assigned
+            for (int dayIndex = 0; dayIndex < Performance.Days.Count; dayIndex++)
+            {
+                var day = Performance.Days[dayIndex];
+                for (int slotIndex = 0; slotIndex < day.TimeSlots.Count; slotIndex++)
+                {
+                    var slotVars = bandSlotVars.Where(kvp => kvp.Key.dayIndex == dayIndex && kvp.Key.slotIndex == slotIndex)
+                                               .Select(kvp => kvp.Value).ToArray();
+                    if (slotVars.Length > 0)
+                    {
+                        var constraint = solver.MakeConstraint(0, 1, $"day_{dayIndex}_slot_{slotIndex}_max_one_band");
+                        foreach (var variable in slotVars)
+                        {
+                            constraint.SetCoefficient(variable, 1);
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine($"Added constraints for {Bands.Count} bands and {Performance.Days.Sum(d => d.TimeSlots.Count)} slots.");
+
+            // Objective: Maximize total weight of assignments
+            var objective = solver.Objective();
+            foreach (var kvp in bandSlotVars)
+            {
+                var weight = bandSlotWeights[kvp.Key];
+                objective.SetCoefficient(kvp.Value, weight);
+            }
+            objective.SetMaximization();
+
+            Console.WriteLine("Starting optimization...");
+            var resultStatus = solver.Solve();
+
+            if (resultStatus == Solver.ResultStatus.OPTIMAL)
+            {
+                Console.WriteLine($"Optimal solution found! Total weight: {solver.Objective().Value()}");
+
+                // Clear current assignments
+                foreach (var day in Performance.Days)
+                {
+                    foreach (var slot in day.TimeSlots)
+                    {
+                        slot.BandCandidates.Clear();
+                    }
+                }
+
+                // Apply optimal assignments
+                int assignedBands = 0;
+                foreach (var kvp in bandSlotVars)
+                {
+                    if (kvp.Value.SolutionValue() > 0.5) // Variable is set to 1
+                    {
+                        var (band, dayIndex, slotIndex) = kvp.Key;
+                        var weight = bandSlotWeights[kvp.Key];
+
+                        var day = Performance.Days[dayIndex];
+                        var slot = day.TimeSlots[slotIndex];
+
+                        slot.BandCandidates.Add(new BandCandidate
+                        {
+                            Band = band,
+                            PreferenceWeight = weight
+                        });
+
+                        assignedBands++;
+                        Console.WriteLine($"  - {band.Name} assigned to {day.Date:MM-dd} slot {GetSlotDisplayName(slot)} (weight: {weight})");
+                    }
+                }
+
+                Console.WriteLine($"Successfully assigned {assignedBands} bands to their optimal slots.");
+            }
+            else if (resultStatus == Solver.ResultStatus.FEASIBLE)
+            {
+                Console.WriteLine($"Feasible solution found. Total weight: {solver.Objective().Value()}");
+                Console.WriteLine("Note: This may not be the optimal solution.");
+            }
+            else
+            {
+                Console.WriteLine($"No solution found. Status: {resultStatus}");
+            }
+
+            // Cleanup
+            solver.Dispose();
+        }
+
+        public void OptimizeScheduleStage0()
         {
             Console.WriteLine("Optimizing schedule - Stage 1: Removing lower weighted preferences for uncontested top choices...");
 
