@@ -58,6 +58,25 @@ namespace BandScheduler
             Days.Add(day3);
         }
 
+        // Deep copy constructor
+        public Performance(Performance original)
+        {
+            PerformanceName = original.PerformanceName;
+            Venue = original.Venue;
+            Days = new List<PerformanceDay>();
+
+            foreach (var originalDay in original.Days)
+            {
+                Days.Add(new PerformanceDay(originalDay));
+            }
+        }
+
+        // Create a deep copy of this Performance
+        public Performance DeepCopy()
+        {
+            return new Performance(this);
+        }
+
         // put all bands into the performance's slots candidates
         public void AddBandsToSlots(List<Band> bands)
         {
@@ -86,11 +105,7 @@ namespace BandScheduler
                             // Band has specific time preference
                             var targetSlot = matchingDay.TimeSlots[preference.PreferredTimeSlot];
 
-                            var bandCandidate = new BandCandidate
-                            {
-                                Band = band,
-                                PreferenceWeight = preference.Weight
-                            };
+                            var bandCandidate = new BandCandidate(band, preference.Weight);
 
                             targetSlot.BandCandidates.Add(bandCandidate);
                         }
@@ -100,11 +115,7 @@ namespace BandScheduler
                             var flexibleSlot = matchingDay.TimeSlots.FirstOrDefault(ts => ts.IsFlexibleSlot);
                             if (flexibleSlot != null)
                             {
-                                var bandCandidate = new BandCandidate
-                                {
-                                    Band = band,
-                                    PreferenceWeight = preference.Weight
-                                };
+                                var bandCandidate = new BandCandidate(band, preference.Weight);
 
                                 flexibleSlot.BandCandidates.Add(bandCandidate);
                             }
@@ -131,6 +142,23 @@ namespace BandScheduler
     {
         public DateTime Date { get; set; }
         public List<TimeSlot> TimeSlots { get; set; } = new List<TimeSlot>();
+
+        // Copy constructor
+        public PerformanceDay(PerformanceDay original)
+        {
+            Date = original.Date;
+            TimeSlots = new List<TimeSlot>();
+
+            foreach (var originalSlot in original.TimeSlots)
+            {
+                TimeSlots.Add(new TimeSlot(originalSlot));
+            }
+        }
+
+        // Default constructor
+        public PerformanceDay()
+        {
+        }
     }
 
     public class TimeSlot
@@ -141,11 +169,49 @@ namespace BandScheduler
         // rehearsal and performance time
 
         public List<BandCandidate> BandCandidates { get; set; } = new List<BandCandidate>();
+
+        // Copy constructor
+        public TimeSlot(TimeSlot original)
+        {
+            Order = original.Order;
+            IsFlexibleSlot = original.IsFlexibleSlot;
+            BandCandidates = new List<BandCandidate>();
+
+            foreach (var originalCandidate in original.BandCandidates)
+            {
+                BandCandidates.Add(new BandCandidate(originalCandidate));
+            }
+        }
+
+        // Default constructor
+        public TimeSlot()
+        {
+        }
     }
 
     public class BandCandidate
     {
-        public required Band Band { get; set; }
+        public Band Band { get; set; }
         public double PreferenceWeight { get; set; }
+
+        // Copy constructor
+        public BandCandidate(BandCandidate original)
+        {
+            Band = original.Band; // Band objects are shared references, no need to deep copy
+            PreferenceWeight = original.PreferenceWeight;
+        }
+
+        // Constructor for creating new instances
+        public BandCandidate(Band band, double preferenceWeight)
+        {
+            Band = band;
+            PreferenceWeight = preferenceWeight;
+        }
+
+        // Default constructor
+        public BandCandidate()
+        {
+            Band = null!; // Will be set explicitly
+        }
     }
 }
