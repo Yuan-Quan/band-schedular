@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("band-schedular")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c6c43c2aa4420a4c18d206df974a6d883ef19042")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cfded84eee71d921606dc29ae0e679a72a894160")]
 [assembly: System.Reflection.AssemblyProductAttribute("band-schedular")]
 [assembly: System.Reflection.AssemblyTitleAttribute("band-schedular")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

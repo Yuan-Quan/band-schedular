@@ -133,8 +133,8 @@ namespace BandScheduler
                 // Remove "月" and "日" characters and extract numbers
                 var cleanDate = chineseDateStr.Replace("月", "/").Replace("日", "");
 
-                // Assuming the year is 2024 (you can adjust this as needed)
-                var fullDateStr = $"2024/{cleanDate}";
+                // Assuming the year is 2025 (updated to match Performance class)
+                var fullDateStr = $"2025/{cleanDate}";
 
                 if (DateTime.TryParse(fullDateStr, out DateTime result))
                 {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BandScheduler
 {
@@ -50,6 +51,58 @@ namespace BandScheduler
             }
             Days.Add(day3);
         }
+
+        // put all bands into the performance's slots candidates
+        public void AddBandsToSlots(List<Band> bands)
+        {
+            // Clear existing candidates first
+            foreach (var day in Days)
+            {
+                foreach (var slot in day.TimeSlots)
+                {
+                    slot.BandCandidates.Clear();
+                }
+            }
+
+            // Add bands to slots based on their preferences
+            foreach (var band in bands)
+            {
+                foreach (var preference in band.SchedulePreferences)
+                {
+                    // Find the matching day
+                    var matchingDay = Days.FirstOrDefault(d => d.Date.Date == preference.PreferredDate.Date);
+
+                    if (matchingDay != null)
+                    {
+                        // Check if the preferred time slot exists for this day
+                        if (preference.PreferredTimeSlot >= 0 && preference.PreferredTimeSlot < matchingDay.TimeSlots.Count)
+                        {
+                            var targetSlot = matchingDay.TimeSlots[preference.PreferredTimeSlot];
+
+                            // Create a copy of the band with the preference weight for this slot
+                            var bandCandidate = new BandCandidate
+                            {
+                                Band = band,
+                                PreferenceWeight = preference.Weight
+                            };
+
+                            targetSlot.BandCandidates.Add(bandCandidate);
+                        }
+                    }
+                }
+            }
+
+            // Sort candidates in each slot by preference weight (highest first)
+            foreach (var day in Days)
+            {
+                foreach (var slot in day.TimeSlots)
+                {
+                    slot.BandCandidates = slot.BandCandidates
+                        .OrderByDescending(bc => bc.PreferenceWeight)
+                        .ToList();
+                }
+            }
+        }
     }
 
     public class PerformanceDay
@@ -64,6 +117,12 @@ namespace BandScheduler
 
         // rehearsal and performance time
 
-        public List<Band> CandidateBands { get; set; } = new List<Band>();
+        public List<BandCandidate> BandCandidates { get; set; } = new List<BandCandidate>();
+    }
+
+    public class BandCandidate
+    {
+        public required Band Band { get; set; }
+        public double PreferenceWeight { get; set; }
     }
 }
