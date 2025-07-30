@@ -82,3 +82,6 @@ Sessionx.vim
 .vscode/sftp.json
 .vscode/tags
 .devcontainer/
+
+bin/
+obj/
